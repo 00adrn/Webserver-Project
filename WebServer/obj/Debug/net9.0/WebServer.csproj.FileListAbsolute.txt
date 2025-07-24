@@ -1,0 +1,15 @@
+C:\Web Applications\Web Server\Webserver-Project\WebServer\bin\Debug\net9.0\WebServer.exe
+C:\Web Applications\Web Server\Webserver-Project\WebServer\bin\Debug\net9.0\WebServer.deps.json
+C:\Web Applications\Web Server\Webserver-Project\WebServer\bin\Debug\net9.0\WebServer.runtimeconfig.json
+C:\Web Applications\Web Server\Webserver-Project\WebServer\bin\Debug\net9.0\WebServer.dll
+C:\Web Applications\Web Server\Webserver-Project\WebServer\bin\Debug\net9.0\WebServer.pdb
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.AssemblyInfoInputs.cache
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.AssemblyInfo.cs
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.csproj.CoreCompileInputs.cache
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.sourcelink.json
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.dll
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\refint\WebServer.dll
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.pdb
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\WebServer.genruntimeconfig.cache
+C:\Web Applications\Web Server\Webserver-Project\WebServer\obj\Debug\net9.0\ref\WebServer.dll
