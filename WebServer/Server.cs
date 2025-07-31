@@ -1,5 +1,7 @@
+using System.ComponentModel.Design;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,8 +11,10 @@ namespace WebServer;
 public static class Server
 {
     private static HttpListener listener;
+    // private static Router router = new Router();
     public static int maxSimultaneousConnections = 20;
     private static Semaphore sem = new Semaphore(maxSimultaneousConnections, maxSimultaneousConnections);
+
 
     /// returns a list of ip addresses that are on the localhost network
 
@@ -65,7 +69,7 @@ public static class Server
     //log requests
     public static void Log(HttpListenerRequest request)
     {
-        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url.AbsoluteUri);
+        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url.AbsoluteUri.Substring(7));
     }
 
     //Asynchronously listen and wait for connectiosn
@@ -79,8 +83,12 @@ public static class Server
 
         //log the request
         Log(context.Request);
-        
 
+        HttpListenerRequest request = context.Request;
+        string verb = request.HttpMethod;
+        string path = request.Url!.AbsoluteUri; //gives entire link : http://192.168.40.224:8080/favicon.ico
+        var parms = request.QueryString;
+        Console.WriteLine(path);
 
         string response = "<html><head><meta http-equiv='content-type' content='text/html; charset=utf-8'/></head>Hello Browser!</html>";
         byte[] encoded = Encoding.UTF8.GetBytes(response);
