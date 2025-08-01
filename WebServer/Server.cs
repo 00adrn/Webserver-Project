@@ -1,6 +1,7 @@
 using System.ComponentModel.Design;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -10,13 +11,19 @@ namespace WebServer;
 
 public static class Server
 {
-    private static HttpListener listener;
-    // private static Router router = new Router();
+    private static HttpListener listener = new HttpListener();
+    private static Router router = new Router();
     public static int maxSimultaneousConnections = 20;
     private static Semaphore sem = new Semaphore(maxSimultaneousConnections, maxSimultaneousConnections);
 
-
-    /// returns a list of ip addresses that are on the localhost network
+    public static void Start()
+    {
+        Console.WriteLine("Starting server...");
+        router.WebsitePath = GetWebsitePath();
+        List<IPAddress> localhostIPs = GetLocalhostIPs();
+        InitializeListener(localhostIPs);
+        StartListener();
+    }
 
     private static List<IPAddress> GetLocalhostIPs()
     {
@@ -27,38 +34,33 @@ public static class Server
         return ret;
     }
 
-    public static void Start()
+    private static void InitializeListener(List<IPAddress> localhostIPs)
     {
-        List<IPAddress> localhostIPs = GetLocalhostIPs();
-        HttpListener listener = InitializeListener(localhostIPs);
-        Start(listener);
-    }
+        Console.WriteLine("Initializing Listener...");
 
-    private static HttpListener InitializeListener(List<IPAddress> localhostIPs)
-    {
-        HttpListener listener = new HttpListener();
-        listener.Prefixes.Add("http://localhost:8080/");
+        listener.Prefixes.Add("http://localhost/");
 
-        //listen to the IP address as well
         localhostIPs.ForEach(ip =>
         {
-            Console.WriteLine("Listening on IP " + "http://" + ip.ToString() + ":8080/");
-            listener.Prefixes.Add("http://" + ip.ToString() + ":8080/");
+            string prefix = $"http://{ip.ToString()}/";
+            Console.WriteLine($"Listening on {prefix}");
+            listener.Prefixes.Add(prefix);
         });
 
-        return listener;
+        Console.WriteLine("Listener initialized!");
     }
 
     //Listens to connections on a seperate worker thread
-    private static void Start(HttpListener listener)
+    private static void StartListener()
     {
+        Console.WriteLine("Starting listener...");
         listener.Start();
         Task.Run(() => RunServer(listener));
     }
 
-    // Running in a separate thread, starts listening to connections not exceeding the max number of connections set
     private static async Task RunServer(HttpListener listener)
     {
+        Console.WriteLine("Server Started!");
         while (true)
         {
             sem.WaitOne();
@@ -66,34 +68,43 @@ public static class Server
         }
     }
 
-    //log requests
+
     public static void Log(HttpListenerRequest request)
     {
-        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url.AbsoluteUri.Substring(7));
+        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url!.AbsoluteUri.Substring(7));
     }
 
-    //Asynchronously listen and wait for connectiosn
     private static async Task StartConnectionListener(HttpListener listener)
     {
-        //Wait for connections, return to caller while we wait
         HttpListenerContext context = await listener.GetContextAsync();
 
-        //release the sempahore so that another listener can immediately start up
         sem.Release();
-
-        //log the request
-        Log(context.Request);
-
         HttpListenerRequest request = context.Request;
+
+        Log(request);
+
         string verb = request.HttpMethod;
         string path = request.Url!.AbsoluteUri; //gives entire link : http://192.168.40.224:8080/favicon.ico
-        var parms = request.QueryString;
-        Console.WriteLine(path);
+        Dictionary<string, string> kvParams = new Dictionary<string, string>();
+        foreach (string? key in request.QueryString.AllKeys)
+        { kvParams.Add(key!, request.QueryString[key]); }
+
+        router.Route(verb, path, kvParams);
+
+        GetWebsitePath();
 
         string response = "<html><head><meta http-equiv='content-type' content='text/html; charset=utf-8'/></head>Hello Browser!</html>";
         byte[] encoded = Encoding.UTF8.GetBytes(response);
         context.Response.ContentLength64 = encoded.Length;
         context.Response.OutputStream.Write(encoded, 0, encoded.Length);
         context.Response.OutputStream.Close();
+    }
+
+    public static string GetWebsitePath()
+    {
+        string websitePath = Assembly.GetExecutingAssembly().Location;
+        Console.WriteLine(websitePath);
+
+        return websitePath;
     }
 }
