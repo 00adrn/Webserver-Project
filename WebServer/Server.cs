@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Clifton.Extensions;
 
 namespace WebServer;
 
@@ -71,7 +72,7 @@ public static class Server
 
     public static void Log(HttpListenerRequest request)
     {
-        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url!.AbsoluteUri.Substring(7));
+        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url!.AbsoluteUri.RightOf('/', 3));
     }
 
     private static async Task StartConnectionListener(HttpListener listener)
@@ -84,27 +85,36 @@ public static class Server
         Log(request);
 
         string verb = request.HttpMethod;
-        string path = request.Url!.AbsoluteUri; //gives entire link : http://192.168.40.224:8080/favicon.ico
-        Dictionary<string, string> kvParams = new Dictionary<string, string>();
-        foreach (string? key in request.QueryString.AllKeys)
-        { kvParams.Add(key!, request.QueryString[key]); }
+        string path = request.RawUrl.LeftOf("?");
+        string parms = request.RawUrl.RightOf("?");
+        Dictionary<string, string> kvParams = GetKeyValues(parms);
 
         router.Route(verb, path, kvParams);
+    }
 
-        GetWebsitePath();
+    private static Dictionary<string, string> GetKeyValues(string data, Dictionary<string, string> kv = null)
+    {
+        kv.IfNull(() => new Dictionary<string, string>());
+        data.If(d => d.Length > 0, (d) => d.Split('&').ForEach(keyValue => kv[keyValue.LeftOf('=')] = keyValue.RightOf('=')));
 
-        string response = "<html><head><meta http-equiv='content-type' content='text/html; charset=utf-8'/></head>Hello Browser!</html>";
-        byte[] encoded = Encoding.UTF8.GetBytes(response);
-        context.Response.ContentLength64 = encoded.Length;
-        context.Response.OutputStream.Write(encoded, 0, encoded.Length);
-        context.Response.OutputStream.Close();
+        return kv;
     }
 
     public static string GetWebsitePath()
     {
         string websitePath = Assembly.GetExecutingAssembly().Location;
-        Console.WriteLine(websitePath);
+        websitePath = websitePath.LeftOfRightmostOf("\\").LeftOfRightmostOf('\\').LeftOfRightmostOf("\\") + "\\Website";
 
         return websitePath;
+    }
+
+    private static void Respond(HttpListenerResponse response, ResponsePacket resp)
+    {
+        response.ContentType = resp.ContentType;
+        response.ContentLength64 = resp.Data.Length;
+        response.OutputStream.Write(resp.Data, 0, resp.Data.Length);
+        response.ContentEncoding = resp.Encoding;
+        response.StatusCode = (int)HttpStatusCode.OK;
+        response.OutputStream.Close();
     }
 }

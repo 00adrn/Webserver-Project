@@ -7,4 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\" />
+    <Folder Include="Pages\css\" />
+    <Folder Include="Pages\images\" />
+    <Folder Include="Pages\scripts\" />
+  </ItemGroup>
+
 </Project>

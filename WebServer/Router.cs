@@ -1,5 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading.Tasks;
+using Clifton.Extensions;
 
 namespace WebServer;
 
@@ -7,9 +13,14 @@ public class Router
 {
     public string WebsitePath { get; set; }
     private Dictionary<string, ExtensionInfo> extFolderMap;
+    public const string POST = "post";
+    public const string GET = "get";
+    public const string PUT = "put";
+    public const string DELETE = "delete";
 
     public Router()
     {
+
         extFolderMap = new Dictionary<string, ExtensionInfo>()
         {
             {"ico", new ExtensionInfo() {Loader=ImageLoader, ContentType="image/ico"}},
@@ -34,6 +45,49 @@ public class Router
 
         return ret;
     }
+
+    private ResponsePacket FileLoader(string fullPath, string ext, ExtensionInfo extInfo)
+    {
+        string text = File.ReadAllText(fullPath);
+        ResponsePacket ret = new ResponsePacket() { Data = Encoding.UTF8.GetBytes(text), ContentType = extInfo.ContentType, Encoding = Encoding.UTF8 };
+
+        return ret;
+    }
+
+    private ResponsePacket PageLoader(string fullPath, string ext, ExtensionInfo extInfo)
+    {
+        ResponsePacket ret = new ResponsePacket();
+
+        if (fullPath == WebsitePath) // If nothing follows the domain name or ip address, then load index.html
+        {
+            ret = Route(GET, "/index.html", null);
+        }
+        else
+        {
+            if (String.IsNullOrEmpty(ext))
+            {
+                fullPath = fullPath + ".html";
+            }
+
+            fullPath = WebsitePath + "\\Pages" + fullPath.RightOf(WebsitePath); //NEEDS EDITING
+            ret = FileLoader(fullPath, ext, extInfo);
+        }
+        return ret;
+    }
+
+    public ResponsePacket Route(string verb, string path, Dictionary<string, string> kvParams)
+    {
+        string ext = path.RightOf('.');
+        ExtensionInfo extInfo;
+        ResponsePacket ret = null;
+
+        if (extFolderMap.TryGetValue(ext, out extInfo))
+        {
+            string fullPath = Path.Combine(WebsitePath, path);
+            ret = extInfo.Loader(fullPath, ext, extInfo);
+        }
+        return ret;
+    }
 }
 
 public class ResponsePacket
@@ -41,11 +95,11 @@ public class ResponsePacket
     public string Redirect { get; set; }
     public byte[] Data { get; set; }
     public string ContentType { get; set; }
-    public Encoding Enconding { get; set; }
+    public Encoding Encoding { get; set; }
 }
 
 internal class ExtensionInfo
 {
-    public Func<string, string, string, ExtensionInfo, ResponsePacket> Loader { get; set; }
+    public Func< string, string, ExtensionInfo, ResponsePacket> Loader { get; set; }
     public string ContentType { get; set; }
 }
