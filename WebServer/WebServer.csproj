@@ -8,10 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Pages\" />
-    <Folder Include="Pages\css\" />
-    <Folder Include="Pages\images\" />
-    <Folder Include="Pages\scripts\" />
+    <Folder Include="Website\" />
+    <Folder Include="Website\Pages\" />
   </ItemGroup>
 
 </Project>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Clifton.Extensions;
 
@@ -20,6 +21,7 @@ public class Router
 
     public Router()
     {
+        WebsitePath = Server.GetWebsitePath();
 
         extFolderMap = new Dictionary<string, ExtensionInfo>()
         {
@@ -56,50 +58,55 @@ public class Router
 
     private ResponsePacket PageLoader(string fullPath, string ext, ExtensionInfo extInfo)
     {
-        ResponsePacket ret = new ResponsePacket();
-
-        if (fullPath == WebsitePath) // If nothing follows the domain name or ip address, then load index.html
-        {
-            ret = Route(GET, "/index.html", null);
-        }
-        else
-        {
-            if (String.IsNullOrEmpty(ext))
-            {
-                fullPath = fullPath + ".html";
-            }
-
-            fullPath = WebsitePath + "\\Pages" + fullPath.RightOf(WebsitePath); //NEEDS EDITING
-            ret = FileLoader(fullPath, ext, extInfo);
-        }
-        return ret;
+        return FileLoader(fullPath, ext, extInfo);
     }
 
     public ResponsePacket Route(string verb, string path, Dictionary<string, string> kvParams)
     {
         string ext = path.RightOf('.');
         ExtensionInfo extInfo;
-        ResponsePacket ret = null;
 
-        if (extFolderMap.TryGetValue(ext, out extInfo))
+        if (path == "/") { path = "Pages\\index.html"; ext = "html"; }
+        else if (string.IsNullOrEmpty(ext)) { path = $"Pages\\{path}.html"; ext = "html"; }
+
+        string fullPath = Path.Combine(WebsitePath, path);
+
+        if (!extFolderMap.TryGetValue(ext, out extInfo))
         {
-            string fullPath = Path.Combine(WebsitePath, path);
-            ret = extInfo.Loader(fullPath, ext, extInfo);
+            Console.WriteLine("Unsupported Extension");
+            return new ResponsePacket()
+            {
+                Data = Encoding.UTF8.GetBytes("<h1>415 Error: Unsupported Extension Type"),
+                ContentType = "text/html",
+                Encoding = Encoding.UTF8
+            };
+        };
+
+        if (!File.Exists(fullPath))
+        {
+            Console.WriteLine("Error: File not found");
+            return new ResponsePacket()
+            {
+                Data = Encoding.UTF8.GetBytes("<h1>Error 404: Page not found"),
+                ContentType = "text/html",
+                Encoding = Encoding.UTF8
+            };
         }
-        return ret;
+
+        return extInfo.Loader!(fullPath, ext, extInfo);
     }
 }
 
 public class ResponsePacket
 {
-    public string Redirect { get; set; }
-    public byte[] Data { get; set; }
-    public string ContentType { get; set; }
-    public Encoding Encoding { get; set; }
+    public string? Redirect { get; set; }
+    public byte[]? Data { get; set; }
+    public string? ContentType { get; set; }
+    public Encoding? Encoding { get; set; }
 }
 
 internal class ExtensionInfo
 {
-    public Func< string, string, ExtensionInfo, ResponsePacket> Loader { get; set; }
-    public string ContentType { get; set; }
+    public Func< string, string, ExtensionInfo, ResponsePacket>? Loader { get; set; }
+    public string? ContentType { get; set; }
 }

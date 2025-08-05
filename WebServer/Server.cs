@@ -37,13 +37,12 @@ public static class Server
 
     private static void InitializeListener(List<IPAddress> localhostIPs)
     {
-        Console.WriteLine("Initializing Listener...");
 
-        listener.Prefixes.Add("http://localhost/");
+        listener.Prefixes.Add("http://localhost:8080/");
 
         localhostIPs.ForEach(ip =>
         {
-            string prefix = $"http://{ip.ToString()}/";
+            string prefix = $"http://{ip.ToString()}:8080/";
             Console.WriteLine($"Listening on {prefix}");
             listener.Prefixes.Add(prefix);
         });
@@ -54,7 +53,6 @@ public static class Server
     //Listens to connections on a seperate worker thread
     private static void StartListener()
     {
-        Console.WriteLine("Starting listener...");
         listener.Start();
         Task.Run(() => RunServer(listener));
     }
@@ -85,14 +83,16 @@ public static class Server
         Log(request);
 
         string verb = request.HttpMethod;
-        string path = request.RawUrl.LeftOf("?");
-        string parms = request.RawUrl.RightOf("?");
+        string path = request.RawUrl!.LeftOf("?");
+        string parms = request.RawUrl!.RightOf("?");
         Dictionary<string, string> kvParams = GetKeyValues(parms);
 
-        router.Route(verb, path, kvParams);
+        ResponsePacket responsePacket = router.Route(verb, path, kvParams);
+
+        Respond(context.Response, responsePacket);
     }
 
-    private static Dictionary<string, string> GetKeyValues(string data, Dictionary<string, string> kv = null)
+    private static Dictionary<string, string> GetKeyValues(string data, Dictionary<string, string> kv = null!)
     {
         kv.IfNull(() => new Dictionary<string, string>());
         data.If(d => d.Length > 0, (d) => d.Split('&').ForEach(keyValue => kv[keyValue.LeftOf('=')] = keyValue.RightOf('=')));
@@ -102,16 +102,16 @@ public static class Server
 
     public static string GetWebsitePath()
     {
-        string websitePath = Assembly.GetExecutingAssembly().Location;
-        websitePath = websitePath.LeftOfRightmostOf("\\").LeftOfRightmostOf('\\').LeftOfRightmostOf("\\") + "\\Website";
-
+        string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        string projectRoot = Path.GetFullPath(Path.Combine(assemblyDirectory, @"..\..\..\"));
+        string websitePath = Path.Combine(projectRoot, "Website");
         return websitePath;
     }
 
     private static void Respond(HttpListenerResponse response, ResponsePacket resp)
     {
         response.ContentType = resp.ContentType;
-        response.ContentLength64 = resp.Data.Length;
+        response.ContentLength64 = resp.Data!.Length;
         response.OutputStream.Write(resp.Data, 0, resp.Data.Length);
         response.ContentEncoding = resp.Encoding;
         response.StatusCode = (int)HttpStatusCode.OK;
