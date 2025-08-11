@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -63,15 +64,16 @@ public class Router
 
     public ResponsePacket Route(string verb, string path, Dictionary<string, string> kvParams)
     {
-        string ext = path.RightOf('.');
+        string ext = path.RightOf('.', 1);
         ExtensionInfo extInfo;
 
         if (path == "/") { path = "Pages\\index.html"; ext = "html"; }
-        else if (string.IsNullOrEmpty(ext)) { path = $"Pages\\{path}.html"; ext = "html"; }
+        else if (string.IsNullOrEmpty(ext)) { path = $"Pages\\{path.RightOf('/', 1)}.html"; ext = "html"; }
+        else { path = path.RightOf('/', 1); }
 
         string fullPath = Path.Combine(WebsitePath, path);
 
-        if (!extFolderMap.TryGetValue(ext, out extInfo))
+        if (!extFolderMap.TryGetValue(ext, out extInfo!))
         {
             Console.WriteLine("Unsupported Extension");
             return new ResponsePacket()
@@ -80,11 +82,12 @@ public class Router
                 ContentType = "text/html",
                 Encoding = Encoding.UTF8
             };
-        };
+        }
+        ;
 
         if (!File.Exists(fullPath))
         {
-            Console.WriteLine("Error: File not found");
+            Console.WriteLine("Error 404: Item not found");
             return new ResponsePacket()
             {
                 Data = Encoding.UTF8.GetBytes("<h1>Error 404: Page not found"),

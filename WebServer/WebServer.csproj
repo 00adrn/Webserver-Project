@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <Folder Include="Website\" />
+    <Folder Include="Website\Css\" />
+    <Folder Include="Website\Images\" />
     <Folder Include="Website\Pages\" />
   </ItemGroup>
 
