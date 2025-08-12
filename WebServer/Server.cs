@@ -17,6 +17,46 @@ public static class Server
     public static int maxSimultaneousConnections = 20;
     private static Semaphore sem = new Semaphore(maxSimultaneousConnections, maxSimultaneousConnections);
 
+    public enum ServerError
+    {
+        OK,
+        ExpiredSession,
+        NotAuthorized,
+        FileNotFound,
+        PageNotFound,
+        ServerError,
+        UnknownType
+    }
+
+    public static string? ErrorHandler(Server.ServerError error)
+    {
+        string? errorRoute = null;
+
+        switch (error)
+        {
+            case Server.ServerError.ExpiredSession:
+                errorRoute = "/ErrorPages\\expiredSession.html";
+                break;
+            case Server.ServerError.FileNotFound:
+                errorRoute = "/ErrorPages\\fileNotFound.html";
+                break;
+            case Server.ServerError.NotAuthorized:
+                errorRoute = "/ErrorPages\\notAuthorized.html";
+                break;
+            case Server.ServerError.PageNotFound:
+                errorRoute = "/ErrorPages\\pageNotFound.html";
+                break;
+            case Server.ServerError.ServerError:
+                errorRoute = "/ErrorPages\\serverError.html";
+                break;
+            case Server.ServerError.UnknownType:
+                errorRoute = "/ErrorPages\\unknownType.html";
+                break;
+        }
+
+        return errorRoute;
+    }
+
     public static void Start()
     {
         Console.WriteLine("Starting server...");
@@ -84,6 +124,11 @@ public static class Server
         Dictionary<string, string> kvParams = GetKeyValues(parms);
 
         ResponsePacket responsePacket = router.Route(verb, path, kvParams);
+
+        if (responsePacket.Error != ServerError.OK)
+        {
+            responsePacket = router.Route("get", ErrorHandler(responsePacket.Error)!, null);
+        }
 
         Respond(context.Response, responsePacket);
     }
