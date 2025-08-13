@@ -58,9 +58,11 @@ public class Router
         string ext = path.RightOf('.', 1);
         ExtensionInfo extInfo;
 
-        if (path == "/") { path = "Pages\\index.html"; ext = "html"; }
-        else if (ext == "png" || ext == "jpg" || ext == "gif" || ext == "ico"){ path = $"Images\\{path}"; }
-        else if (string.IsNullOrEmpty(ext)) { path = $"Pages\\{path}.html"; ext = "html"; }
+        if (path == "")
+            { path = "Pages\\index.html"; ext = "html"; }
+
+        else if (string.IsNullOrEmpty(ext))
+        { path = $"Pages\\{path}.html"; ext = "html"; }
 
         string fullPath = Path.Combine(WebsitePath, path);
 

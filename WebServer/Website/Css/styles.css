@@ -1,0 +1,16 @@
+body {
+    font-size: 20;
+    display: flex;
+}
+
+.image-background{
+    max-width: max-content;
+    max-height: max-content;
+    justify-content: left;
+    padding-left: 700;
+}
+
+.dark-mode{
+    color: aliceblue;
+    background-color: black;
+}
