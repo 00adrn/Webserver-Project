@@ -1,5 +1,4 @@
 using System.Text;
-using Clifton.Extensions;
 
 namespace WebServer;
 
@@ -54,15 +53,16 @@ public class Router
 
     public ResponsePacket Route(string verb, string path, Dictionary<string, string>? kvParams)
     {
-        path = path.RightOf('/', 1);
-        string ext = path.RightOf('.', 1);
+        path = path[1..];
+        string ext = path[(1+path.IndexOf('.'))..];
+
         ExtensionInfo extInfo;
 
         if (path == "")
-            { path = "Pages\\index.html"; ext = "html"; }
+            { path = "Pages/index.html"; ext = "html"; }
 
         else if (string.IsNullOrEmpty(ext))
-        { path = $"Pages\\{path}.html"; ext = "html"; }
+        { path = $"Pages/{path}.html"; ext = "html"; }
 
         string fullPath = Path.Combine(WebsitePath, path);
 

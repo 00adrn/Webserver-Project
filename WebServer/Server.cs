@@ -1,12 +1,7 @@
-using System.ComponentModel.Design;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Clifton.Extensions;
+using WebServer.Website;
 
 namespace WebServer;
 
@@ -16,6 +11,7 @@ public static class Server
     private static Router router = new Router();
     public static int maxSimultaneousConnections = 20;
     private static Semaphore sem = new Semaphore(maxSimultaneousConnections, maxSimultaneousConnections);
+    private static int port = 8080;
 
     public enum ServerError
     {
@@ -35,22 +31,22 @@ public static class Server
         switch (error)
         {
             case Server.ServerError.ExpiredSession:
-                errorRoute = "/ErrorPages\\expiredSession.html";
+                errorRoute = "/ErrorPages/expiredSession.html";
                 break;
             case Server.ServerError.FileNotFound:
-                errorRoute = "/ErrorPages\\fileNotFound.html";
+                errorRoute = "/ErrorPages/fileNotFound.html";
                 break;
             case Server.ServerError.NotAuthorized:
-                errorRoute = "/ErrorPages\\notAuthorized.html";
+                errorRoute = "/ErrorPages/notAuthorized.html";
                 break;
             case Server.ServerError.PageNotFound:
-                errorRoute = "/ErrorPages\\pageNotFound.html";
+                errorRoute = "/ErrorPages/pageNotFound.html";
                 break;
             case Server.ServerError.ServerError:
-                errorRoute = "/ErrorPages\\serverError.html";
+                errorRoute = "/ErrorPages/serverError.html";
                 break;
             case Server.ServerError.UnknownType:
-                errorRoute = "/ErrorPages\\unknownType.html";
+                errorRoute = "/ErrorPages/unknownType.html";
                 break;
         }
 
@@ -78,14 +74,14 @@ public static class Server
     private static void InitializeListener(List<IPAddress> localhostIPs)
     {
 
-        listener.Prefixes.Add("http://localhost:8080/");
+        listener.Prefixes.Add($"http://localhost:{port}/");
 
-        localhostIPs.ForEach(ip =>
+        foreach (IPAddress ip in localhostIPs)
         {
-            string address = $"http://{ip.ToString()}:8080/";
+            string address = $"http://{ip.ToString()}:{port}/";
             Console.WriteLine($"Listening on {address}");
             listener.Prefixes.Add(address);
-        });
+        }
     }
 
     //Listens to connections on a seperate worker thread
@@ -107,7 +103,7 @@ public static class Server
 
     public static void Log(HttpListenerRequest request)
     {
-        Console.WriteLine(request.RemoteEndPoint + " " + request.HttpMethod + " /" + request.Url!.AbsoluteUri.RightOf('/', 3));
+        Console.WriteLine($"{request.HttpMethod} {request.Url!.AbsoluteUri}");
     }
 
     private static async Task StartConnectionListener(HttpListener listener)
@@ -120,23 +116,29 @@ public static class Server
 
         string verb = request.HttpMethod;
         string path = request.RawUrl!;
-        string parms = request.RawUrl!.RightOf("?");
+        string parms = request.RawUrl!.After('?');
         Dictionary<string, string> kvParams = GetKeyValues(parms);
 
         ResponsePacket responsePacket = router.Route(verb, path, kvParams);
 
         if (responsePacket.Error != ServerError.OK)
         {
-            responsePacket = router.Route("get", ErrorHandler(responsePacket.Error)!, null);
+            responsePacket.Redirect = ErrorHandler(responsePacket.Error);
         }
-
-        Respond(context.Response, responsePacket);
+        
+        Respond(request, context.Response, responsePacket);
     }
 
     private static Dictionary<string, string> GetKeyValues(string data, Dictionary<string, string> kv = null!)
     {
-        kv.IfNull(() => new Dictionary<string, string>());
-        data.If(d => d.Length > 0, (d) => d.Split('&').ForEach(keyValue => kv[keyValue.LeftOf('=')] = keyValue.RightOf('=')));
+        if (kv.IsNull()){ kv = new Dictionary<string, string>(); }
+
+        if (data.Length > 0)
+        {
+            string[] dataList = data.Split('&');
+            foreach (string keyAndValue in dataList){ kv[keyAndValue.Before('=')] = keyAndValue.After('='); }
+        }
+
 
         return kv;
     }
@@ -149,13 +151,21 @@ public static class Server
         return websitePath;
     }
 
-    private static void Respond(HttpListenerResponse response, ResponsePacket resp)
+    private static void Respond(HttpListenerRequest request, HttpListenerResponse response, ResponsePacket resp)
     {
-        response.ContentType = resp.ContentType;
-        response.ContentLength64 = resp.Data!.Length;
-        response.OutputStream.Write(resp.Data, 0, resp.Data.Length);
-        response.ContentEncoding = resp.Encoding;
-        response.StatusCode = (int)HttpStatusCode.OK;
+        if (resp.Redirect == String.Empty || resp.Redirect == null)
+        {
+            response.ContentType = resp.ContentType;
+            response.ContentLength64 = resp.Data!.Length;
+            response.OutputStream.Write(resp.Data, 0, resp.Data.Length);
+            response.ContentEncoding = resp.Encoding;
+            response.StatusCode = (int)HttpStatusCode.OK;
+        }
+        else
+        {
+            response.StatusCode = (int)HttpStatusCode.Redirect;
+            response.Redirect($"http://{request.UserHostAddress}{resp.Redirect}");
+        }
         response.OutputStream.Close();
     }
 }

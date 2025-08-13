@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Website\" />
     <Folder Include="Website\Css\" />
     <Folder Include="Website\ErrorPages\" />
     <Folder Include="Website\Images\" />
