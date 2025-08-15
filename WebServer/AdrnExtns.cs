@@ -14,6 +14,32 @@ public static class AdrnExtns
         return String.Empty;
     }
 
+    public static string AfterFinal(this string originalString, char x)
+    {
+
+        for (int i = 1; i < originalString.Length; i++)
+        {
+            if (originalString[^i] == x)
+                return originalString[^(i - 1)..];
+        }
+        return String.Empty;
+    }
+
+    public static string AfterXthChar(this string originalString, char x, int y)
+    {
+        int count = 0;
+        for (int i = 0; i < originalString.Length; i++)
+        {
+            if (originalString[i] == x)
+            {
+                count++;
+                if (count == y)
+                    return originalString[(i + 1)..];
+            }
+        }
+        return String.Empty;
+    }
+
     public static string Before(this string originalString, char x)
     {
         if (originalString.IndexOf(x) != -1) { return originalString[1..originalString.IndexOf(x)]; }
@@ -34,5 +60,6 @@ public static class AdrnExtns
     {
         return obj == null;
     }
+
 
 }

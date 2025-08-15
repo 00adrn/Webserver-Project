@@ -13,6 +13,7 @@ public static class Server
     private static Semaphore sem = new Semaphore(maxSimultaneousConnections, maxSimultaneousConnections);
     private static int port = 8080;
 
+
     public enum ServerError
     {
         OK,
@@ -54,12 +55,18 @@ public static class Server
     }
 
     public static void Start()
+    
     {
         Console.WriteLine("Starting server...");
         router.WebsitePath = GetWebsitePath();
         List<IPAddress> localhostIPs = GetLocalhostIPs();
         InitializeListener(localhostIPs);
         StartListener();
+    }
+
+    public static void AddRoute(Route route)
+    {
+        router.AddRoute(route);
     }
 
     private static List<IPAddress> GetLocalhostIPs()
@@ -103,40 +110,47 @@ public static class Server
 
     public static void Log(HttpListenerRequest request)
     {
-        Console.WriteLine($"{request.HttpMethod} {request.Url!.AbsoluteUri}");
+        Console.WriteLine($"{request.HttpMethod} /{request.Url!.AbsoluteUri.AfterXthChar('/',3)}");
     }
 
     private static async Task StartConnectionListener(HttpListener listener)
     {
         HttpListenerContext context = await listener.GetContextAsync();
         sem.Release();
-
-        HttpListenerRequest request = context.Request;
-        Log(request);
-
-        string verb = request.HttpMethod;
-        string path = request.RawUrl!;
-        string parms = request.RawUrl!.After('?');
-        Dictionary<string, string> kvParams = GetKeyValues(parms);
-
-        ResponsePacket responsePacket = router.Route(verb, path, kvParams);
-
-        if (responsePacket.Error != ServerError.OK)
+        HttpListenerRequest request = null;
+        ResponsePacket responsePacket;
+        try
         {
-            responsePacket.Redirect = ErrorHandler(responsePacket.Error);
+            request = context.Request;
+            Log(request);
+            string verb = request.HttpMethod;
+            string path = request.RawUrl!;
+            string parms = request.RawUrl!.After('?');
+            Dictionary<string, string> kvParams = GetKeyValues(parms);
+            responsePacket = router.Route(verb, path, kvParams);
+
+            if (responsePacket.Error != ServerError.OK)
+            {
+                responsePacket.Redirect = ErrorHandler(responsePacket.Error);
+            }
         }
-        
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex.Message}\n{ex.StackTrace}");
+            responsePacket = new ResponsePacket() { Redirect = ErrorHandler(Server.ServerError.ServerError) };
+        }
+
         Respond(request, context.Response, responsePacket);
     }
 
     private static Dictionary<string, string> GetKeyValues(string data, Dictionary<string, string> kv = null!)
     {
-        if (kv.IsNull()){ kv = new Dictionary<string, string>(); }
+        if (kv.IsNull()) { kv = new Dictionary<string, string>(); }
 
         if (data.Length > 0)
         {
             string[] dataList = data.Split('&');
-            foreach (string keyAndValue in dataList){ kv[keyAndValue.Before('=')] = keyAndValue.After('='); }
+            foreach (string keyAndValue in dataList) { kv[keyAndValue.Before('=')] = keyAndValue.After('='); }
         }
 
 
@@ -164,8 +178,9 @@ public static class Server
         else
         {
             response.StatusCode = (int)HttpStatusCode.Redirect;
-            response.Redirect($"http://{request.UserHostAddress}{resp.Redirect}");
+            response.Redirect($"http://{request.Url!.Authority}{resp.Redirect}");
         }
         response.OutputStream.Close();
     }
+
 }
